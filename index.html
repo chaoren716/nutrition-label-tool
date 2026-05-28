@@ -7,8 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>营养标签审核平台 — GB 28050-2025</title>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<!-- Tesseract.js 按需加载，避免阻塞页面 -->
+<!-- 所有外部脚本延迟加载，不阻塞页面渲染 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"Microsoft YaHei","PingFang SC",-apple-system,sans-serif;background:#f5f6f8;color:#222;min-height:100vh}
@@ -177,6 +176,21 @@ button{font-family:inherit;font-size:14px;cursor:pointer;border:none;border-radi
 <div id="toast-container"></div>
 <div id="modal-container"></div>
 <script>
+// ══ 动态 CDN 加载（不阻塞页面） ══
+var CDN_LOADED = {};
+function loadScript(url, key) {
+  if (CDN_LOADED[key]) return Promise.resolve(true);
+  return new Promise(function(resolve) {
+    var s = document.createElement("script");
+    s.src = url;
+    s.onload = function() { CDN_LOADED[key] = true; resolve(true); };
+    s.onerror = function() { console.warn("CDN load failed: " + key); resolve(false); };
+    document.head.appendChild(s);
+  });
+}
+function ensureSheetJS() { return loadScript("https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js", "sheetjs"); }
+function ensureTesseract() { return loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js", "tesseract"); }
+
 const NRV={energy_kj:8400,protein:60,fat:60,sat_fat:20,carbs:300,sugar:100,sodium:2000};
 const BAGS_PER_BOX=15;
 const ALLERGENS={soy:{name:"大豆及其制品",keywords:["黑豆","黄豆","大豆","豆粕","豆腐","豆浆","酱油","毛豆"]},nuts:{name:"坚果及其果仁类制品",keywords:["核桃","杏仁","腰果","榛子","松子","开心果","夏威夷果","山核桃","胡桃"]},gluten:{name:"含麸质谷物",keywords:["小麦","大麦","黑麦","燕麦","麦片","面粉","麸皮"]},shellfish:{name:"甲壳纲类",keywords:["虾","龙虾","蟹"]},fish:{name:"鱼类",keywords:["鱼"]},egg:{name:"蛋类",keywords:["鸡蛋","鸭蛋","蛋黄","蛋白","蛋清","蛋粉"]},peanut:{name:"花生",keywords:["花生","花生酱","花生油","花生粉"]},milk:{name:"乳及乳制品",keywords:["牛奶","奶粉","乳清","乳糖","奶酪","黄油","奶油","炼乳"]}};
@@ -233,7 +247,7 @@ function updateTotalWeight(){const total=currentFormula.ingredients.reduce(funct
 function searchIngredient(input,i){const val=input.value.toLowerCase();const dropdown=document.getElementById('dropdown-'+i);if(!dropdown)return;const names=Object.keys(INGREDIENT_DB).filter(function(n){return n.toLowerCase().includes(val);}).slice(0,15);if(names.length===0||val===''){dropdown.classList.remove('show');return;}dropdown.classList.add('show');dropdown.innerHTML=names.map(function(n){const src=INGREDIENT_DB[n].source;const tag=src==='CFCT-6'?'<span class="tag tag-cfct">CFCT-6</span>':(src==='LIT'?'<span class="tag tag-lit">LIT</span>':(src==='LABEL'?'<span class="tag tag-label">LABEL</span>':'<span class="tag tag-est">EST</span>'));return '<div class="dropdown-item" onclick="selectIngredient('+i+',\''+n+'\')">'+n+' '+tag+'</div>';}).join('');}
 function selectIngredient(i,name){currentFormula.ingredients[i].name=name;saveFormula();renderIngredientRows();renderFormulaNutritionPreview();}
 
-function handleExcelUpload(event){const file=event.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=function(e){try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const data=XLSX.utils.sheet_to_json(ws,{header:1});parseExcelData(data);}catch(err){showToast('Excel解析失败：'+err.message,'error');}};reader.readAsArrayBuffer(file);}
+function handleExcelUpload(event){const file=event.target.files[0];if(!file)return;ensureSheetJS().then(function(ok){if(!ok){showToast('Excel组件加载失败，请检查网络后刷新重试','error');return;}const reader=new FileReader();reader.onload=function(e){try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const data=XLSX.utils.sheet_to_json(ws,{header:1});parseExcelData(data);}catch(err){showToast('Excel解析失败：'+err.message,'error');}};reader.readAsArrayBuffer(file);}
 function parseExcelData(data){const products=[];let currentProduct=null;for(let r=0;r<data.length;r++){const row=data[r];if(!row||row.length===0)continue;const firstCell=String(row[0]||'').trim();if(firstCell&&!firstCell.match(/^\d+$/)&&firstCell!=='序号'){if(firstCell.includes('茶')||firstCell.includes('（')){if(currentProduct&&currentProduct.ingredients.length>0){products.push(currentProduct);}currentProduct={name:firstCell,bagWeight:15,ingredients:[]};continue;}}if(currentProduct&&row[1]&&row[3]){const name=String(row[1]).trim();const weight=parseFloat(row[3]);if(name&&!isNaN(weight)&&weight>0){if(name==='总重量'||name.includes('总重量')){currentProduct.bagWeight=weight;}else if(!name.includes('规格')&&!name.includes('工艺')&&!name.includes('成本')){currentProduct.ingredients.push({name:name,weight:weight});}}}}if(currentProduct&&currentProduct.ingredients.length>0){products.push(currentProduct);}if(products.length===0){showToast('未识别到产品配方数据，请检查Excel格式','error');return;}if(products.length>1){showProductSelector(products);}else{loadProduct(products[0]);}}
 function showProductSelector(products){const modal=document.getElementById('modal-container');let h='<div class="modal-overlay" onclick="this.parentElement.innerHTML=\'\'"><div class="modal" onclick="event.stopPropagation()"><h3>识别到 '+products.length+' 款产品，请选择导入</h3>';products.forEach(function(p,i){h+='<div class="card" style="cursor:pointer" onclick="loadProduct(products['+i+']);document.getElementById(\'modal-container\').innerHTML=\'\'"><strong>'+p.name+'</strong><span style="color:#888;margin-left:8px">'+p.ingredients.length+'种配料 '+p.bagWeight+'g/包</span></div>';});h+='<div class="modal-actions"><button class="btn btn-outline" onclick="document.getElementById(\'modal-container\').innerHTML=\'\'">取消</button></div></div></div>';modal.innerHTML=h;}
 function loadProduct(product){currentFormula.productName=product.name;currentFormula.bagWeight=product.bagWeight;currentFormula.ingredients=product.ingredients;saveFormula();renderFormulaPanel();showToast('已导入：'+product.name+' ('+product.ingredients.length+'种配料)','success');}
@@ -339,20 +353,6 @@ function handleLabelImage(event) {
   reader.readAsDataURL(file);
 }
 
-let tesseractLoaded = false;
-
-async function loadTesseract() {
-  if (tesseractLoaded) return true;
-  if (window.Tesseract) { tesseractLoaded = true; return true; }
-  return new Promise(function(resolve) {
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-    s.onload = function() { tesseractLoaded = true; resolve(true); };
-    s.onerror = function() { resolve(false); };
-    document.head.appendChild(s);
-  });
-}
-
 async function runOCR() {
   if (reviewOcrRunning) return;
   reviewOcrRunning = true;
@@ -365,7 +365,7 @@ async function runOCR() {
   progress.classList.remove('hidden'); bar.style.width = '10%';
   status.textContent = '正在加载 OCR 引擎...';
 
-  var loaded = await loadTesseract();
+  var loaded = await ensureTesseract();
   if (!loaded) {
     status.textContent = 'OCR 引擎加载失败（网络问题），请手动输入标签值';
     progress.classList.add('hidden');
