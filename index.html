@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0">
 <title>营养标签审核平台 — GB 28050-2025</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- Tesseract.js 按需加载，避免阻塞页面 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"Microsoft YaHei","PingFang SC",-apple-system,sans-serif;background:#f5f6f8;color:#222;min-height:100vh}
@@ -339,6 +339,20 @@ function handleLabelImage(event) {
   reader.readAsDataURL(file);
 }
 
+let tesseractLoaded = false;
+
+async function loadTesseract() {
+  if (tesseractLoaded) return true;
+  if (window.Tesseract) { tesseractLoaded = true; return true; }
+  return new Promise(function(resolve) {
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload = function() { tesseractLoaded = true; resolve(true); };
+    s.onerror = function() { resolve(false); };
+    document.head.appendChild(s);
+  });
+}
+
 async function runOCR() {
   if (reviewOcrRunning) return;
   reviewOcrRunning = true;
@@ -347,11 +361,23 @@ async function runOCR() {
   const progress = document.getElementById('ocrProgress');
   const status = document.getElementById('ocrStatus');
 
-  btn.disabled = true; btn.textContent = '识别中...';
-  progress.classList.remove('hidden'); bar.style.width = '0%';
-  status.textContent = '加载中文识别引擎...';
+  btn.disabled = true; btn.textContent = '加载引擎...';
+  progress.classList.remove('hidden'); bar.style.width = '10%';
+  status.textContent = '正在加载 OCR 引擎...';
+
+  var loaded = await loadTesseract();
+  if (!loaded) {
+    status.textContent = 'OCR 引擎加载失败（网络问题），请手动输入标签值';
+    progress.classList.add('hidden');
+    btn.textContent = '重试加载';
+    btn.disabled = false;
+    reviewOcrRunning = false;
+    return;
+  }
 
   try {
+    status.textContent = '初始化中文识别...';
+    bar.style.width = '20%';
     const worker = await Tesseract.createWorker('chi_sim', 1, {
       logger: function(m) {
         if (m.status === 'recognizing text') {
