@@ -3,83 +3,130 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>营养标签工具 — GB 28050-2025</title>
+<title>营养标签审核平台 — GB 28050-2025</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#333;min-height:100vh}
-.header{background:#1a1a2e;color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
-.header h1{font-size:20px;font-weight:600}
-.header .subtitle{font-size:12px;color:#8899aa;margin-top:2px}
-.nav{display:flex;gap:4px;background:#fff;padding:0 24px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.nav button{padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;color:#666;border-bottom:2px solid transparent;transition:all .2s}
-.nav button:hover{color:#1a73e8}
-.nav button.active{color:#1a73e8;border-bottom-color:#1a73e8;font-weight:600}
-.main{padding:24px;max-width:1400px;margin:0 auto}
+body{font-family:"Microsoft YaHei","PingFang SC",-apple-system,sans-serif;background:#f5f6f8;color:#222;min-height:100vh}
+
+/* 顶部国徽式标题栏 */
+.gov-header{background:linear-gradient(180deg,#1a365d 0%,#153054 100%);color:#fff;border-bottom:3px solid #cf1322}
+.gov-header .top-bar{display:flex;align-items:center;justify-content:center;padding:16px 24px 12px;gap:16px}
+.gov-header .emblem{width:48px;height:48px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px}
+.gov-header h1{font-size:26px;font-weight:700;letter-spacing:4px;text-align:center}
+.gov-header .subtitle-bar{background:rgba(0,0,0,.15);text-align:center;padding:6px;font-size:13px;letter-spacing:2px;color:#b8c9dd}
+
+/* 导航 */
+.gov-nav{display:flex;background:#fff;border-bottom:1px solid #d0d5dd;padding:0 24px;justify-content:center}
+.gov-nav button{padding:14px 28px;border:none;background:none;cursor:pointer;font-size:15px;color:#555;border-bottom:3px solid transparent;transition:all .2s;font-weight:500;position:relative}
+.gov-nav button:hover{color:#1a365d;background:#f0f4fa}
+.gov-nav button.active{color:#cf1322;border-bottom-color:#cf1322;font-weight:700}
+.gov-nav button.active::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:6px solid #cf1322}
+
+/* 主内容区 */
+.main{max-width:1400px;margin:0 auto;padding:24px}
 .panel{display:none}
 .panel.active{display:block}
-.card{background:#fff;border-radius:8px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.card h3{font-size:16px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #eee}
-.row{display:flex;gap:16px;flex-wrap:wrap}
-.col{flex:1;min-width:280px}
-label{display:block;font-size:13px;color:#666;margin-bottom:4px;font-weight:500}
-input,select,button{font-family:inherit;font-size:14px}
-input[type="text"],input[type="number"],select{padding:8px 12px;border:1px solid #ddd;border-radius:6px;width:100%;transition:border .2s}
-input:focus,select:focus{outline:none;border-color:#1a73e8;box-shadow:0 0 0 2px rgba(26,115,232,.15)}
-.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-weight:500;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:#1a73e8;color:#fff}
-.btn-primary:hover{background:#1557b0}
-.btn-success{background:#0d904f;color:#fff}
-.btn-success:hover{background:#0a7a42}
-.btn-danger{background:#d93025;color:#fff}
-.btn-danger:hover{background:#b7251d}
-.btn-outline{background:#fff;color:#1a73e8;border:1px solid #1a73e8}
-.btn-outline:hover{background:#e8f0fe}
-.btn-sm{padding:4px 10px;font-size:12px}
 
+/* 卡片 */
+.card{background:#fff;border-radius:4px;padding:24px;margin-bottom:16px;border:1px solid #e0e4ea;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.card h3{font-size:17px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #1a365d;color:#1a365d;display:flex;align-items:center;gap:8px}
+.card h3::before{content:'';display:inline-block;width:4px;height:18px;background:#cf1322;border-radius:2px}
+
+/* 表单 */
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.col{flex:1;min-width:260px}
+label{display:block;font-size:13px;color:#555;margin-bottom:5px;font-weight:600}
+input,select,textarea{font-family:inherit;font-size:14px}
+input[type="text"],input[type="number"],select,textarea{padding:9px 12px;border:1px solid #c8ced6;border-radius:3px;width:100%;transition:all .2s;background:#fafbfc}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1a365d;box-shadow:0 0 0 3px rgba(26,54,93,.1);background:#fff}
+
+button{font-family:inherit;font-size:14px;cursor:pointer;border:none;border-radius:3px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:6px;padding:8px 18px}
+.btn-primary{background:#1a365d;color:#fff}
+.btn-primary:hover{background:#0d2440}
+.btn-danger{background:#cf1322;color:#fff}
+.btn-danger:hover{background:#a80d1a}
+.btn-success{background:#135c3f;color:#fff}
+.btn-outline{background:#fff;color:#1a365d;border:1px solid #1a365d}
+.btn-outline:hover{background:#f0f4fa}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-warn{background:#d46b08;color:#fff}
+.btn-warn:hover{background:#b55a06}
+
+/* 配料行 */
 .ingredient-row{display:flex;gap:8px;align-items:end;margin-bottom:8px}
 .ingredient-row .name{flex:2}
 .ingredient-row .weight{flex:1}
-.ingredient-row .actions{flex:0 0 60px}
+.ingredient-row .actions{flex:0 0 50px}
 
-.nutrition-table{width:100%;border-collapse:collapse;margin:12px 0}
-.nutrition-table th,.nutrition-table td{padding:10px 16px;text-align:center;border:1px solid #e0e0e0;font-size:14px}
-.nutrition-table th{background:#f5f5f5;font-weight:600}
-.nutrition-table .sub{text-indent:16px;text-align:left;color:#555}
-.nutrition-table .warn td{background:#fff3cd}
-.nutrition-table .error td{background:#fce8e6}
-.nutrition-table .mandatory{font-size:11px;color:#888;text-align:left;padding:8px 16px}
+/* 营养成分表 */
+.nutrition-table{width:100%;border-collapse:collapse;margin:8px 0}
+.nutrition-table th,.nutrition-table td{padding:10px 14px;text-align:center;border:1px solid #d0d5dd;font-size:14px}
+.nutrition-table th{background:#f0f2f5;font-weight:700;color:#1a365d}
+.nutrition-table .sub td:first-child{padding-left:28px;text-align:left;color:#555}
+.nutrition-table .warn td{background:#fff7e6}
+.nutrition-table .warn td:last-child{color:#d46b08;font-weight:700}
+.nutrition-table .error td{background:#fff1f0}
+.nutrition-table .error td:last-child{color:#cf1322;font-weight:700}
+.nutrition-table .mandatory{font-size:11px;color:#888;text-align:left;padding:8px 14px}
 
+/* 检查列表 */
 .check-list{list-style:none}
-.check-list li{padding:8px 12px;margin:4px 0;border-radius:6px;font-size:13px}
-.check-list .pass{background:#e6f4ea;color:#0d652d}
-.check-list .fail{background:#fce8e6;color:#c5221f}
-.check-list .warn{background:#fff3cd;color:#7a5d00}
+.check-list li{padding:10px 14px;margin:5px 0;border-radius:3px;font-size:13px;border-left:4px solid transparent}
+.check-list .pass{background:#f0faf4;border-left-color:#135c3f;color:#135c3f}
+.check-list .fail{background:#fff1f0;border-left-color:#cf1322;color:#a80d1a}
+.check-list .warn{background:#fffbe6;border-left-color:#d46b08;color:#8b5108}
 
-.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:4px}
-.tag-cfct{background:#e8f0fe;color:#1a73e8}
-.tag-lit{background:#fce8e6;color:#c5221f}
-.tag-label{background:#e6f4ea;color:#0d652d}
-.tag-est{background:#fff3cd;color:#7a5d00}
+/* 标签 */
+.tag{display:inline-block;padding:2px 8px;border-radius:2px;font-size:11px;font-weight:700;margin-left:4px}
+.tag-cfct{background:#e6f0ff;color:#1a365d}
+.tag-lit{background:#fff1f0;color:#cf1322}
+.tag-label{background:#f0faf4;color:#135c3f}
+.tag-est{background:#fffbe6;color:#d46b08}
 
-.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:14px;z-index:999;animation:slideIn .3s ease;box-shadow:0 4px 12px rgba(0,0,0,.15)}
-.toast-success{background:#0d904f}
-.toast-error{background:#d93025}
-.toast-info{background:#1a73e8}
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 24px;border-radius:3px;color:#fff;font-size:14px;z-index:999;animation:slideIn .3s;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.toast-success{background:#135c3f}
+.toast-error{background:#cf1322}
+.toast-info{background:#1a365d}
 @keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 
-.preview-canvas{border:1px solid #ddd;border-radius:4px;max-width:100%;margin:12px 0}
-.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:998}
-.modal{background:#fff;border-radius:12px;padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto}
-.modal h3{margin-bottom:16px}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* Canvas */
+.preview-canvas{border:1px solid #d0d5dd;max-width:100%;margin:8px 0}
 
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:998}
+.modal{background:#fff;border-radius:4px;padding:24px;max-width:650px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.15);border-top:4px solid #1a365d}
+.modal h3{margin-bottom:16px;color:#1a365d;font-size:18px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:12px;border-top:1px solid #e0e4ea}
+
+/* 搜索下拉 */
 .search-dropdown{position:relative}
-.search-dropdown .dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:100;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.search-dropdown .dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #c8ced6;border-radius:0 0 3px 3px;max-height:200px;overflow-y:auto;z-index:100;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1)}
 .search-dropdown .dropdown.show{display:block}
 .search-dropdown .dropdown-item{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0}
-.search-dropdown .dropdown-item:hover{background:#e8f0fe}
-.search-dropdown .dropdown-item .src{font-size:10px;color:#999;float:right}
+.search-dropdown .dropdown-item:hover{background:#f0f4fa}
+
+/* 图片上传区 */
+.upload-zone{border:2px dashed #c8ced6;border-radius:4px;padding:40px;text-align:center;cursor:pointer;transition:all .3s;background:#fafbfc}
+.upload-zone:hover{border-color:#1a365d;background:#f0f4fa}
+.upload-zone.has-image{border-style:solid;border-color:#135c3f;padding:12px}
+.upload-zone img{max-width:100%;max-height:400px;border:1px solid #e0e4ea}
+.upload-zone .placeholder{font-size:40px;color:#c8ced6;margin-bottom:12px}
+.upload-zone .text{color:#888;font-size:14px}
+
+/* 对比表差异标记 */
+.diff-highlight{background:#fff1f0 !important;color:#cf1322 !important;font-weight:700}
+.diff-ok{background:#f0faf4 !important;color:#135c3f !important}
+
+/* OCR 进度 */
+.ocr-progress{background:#f0f2f5;border-radius:4px;height:8px;margin:8px 0;overflow:hidden}
+.ocr-progress .bar{background:linear-gradient(90deg,#1a365d,#cf1322);height:100%;transition:width .3s;border-radius:4px}
+
+/* 印章风格 */
+.stamp-pass{display:inline-block;border:3px solid #135c3f;color:#135c3f;padding:4px 16px;border-radius:50%;font-weight:900;font-size:20px;transform:rotate(-15deg);opacity:.8}
+.stamp-fail{display:inline-block;border:3px solid #cf1322;color:#cf1322;padding:4px 16px;border-radius:50%;font-weight:900;font-size:20px;transform:rotate(-15deg);opacity:.8}
 
 .hidden{display:none !important}
 .text-right{text-align:right}
@@ -91,36 +138,38 @@ input:focus,select:focus{outline:none;border-color:#1a73e8;box-shadow:0 0 0 2px 
 .gap-8{gap:8px}
 .flex-between{display:flex;justify-content:space-between;align-items:center}
 
+.compare-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#d0d5dd;margin:12px 0}
+.compare-grid>div{padding:10px 14px;background:#fff;font-size:13px}
+.compare-grid .header{background:#f0f2f5;font-weight:700;color:#1a365d}
+
 @media(max-width:768px){
   .row{flex-direction:column}
   .col{min-width:100%}
-  .header{padding:10px 16px}
-  .header h1{font-size:16px}
+  .gov-header h1{font-size:18px;letter-spacing:2px}
   .main{padding:12px}
-  .nav button{padding:10px 14px;font-size:13px}
+  .gov-nav button{padding:12px 16px;font-size:13px}
 }
 </style>
 </head>
 <body>
-<div class="header">
-  <div>
-    <h1>营养标签工具</h1>
-    <div class="subtitle">GB 28050-2025 新7项标准 · 基于《中国食物成分表 第6版》</div>
+<div class="gov-header">
+  <div class="top-bar">
+    <div class="emblem">&#9767;</div>
+    <h1>营养标签审核平台</h1>
   </div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <span id="ipInfo" style="font-size:11px;color:#8899aa"></span>
-    <button class="btn btn-outline btn-sm" onclick="showDBManager()" style="color:#fff;border-color:rgba(255,255,255,.3)">原料库</button>
-  </div>
+  <div class="subtitle-bar">依据 GB 28050-2025《食品安全国家标准 预包装食品营养标签通则》· 数据源《中国食物成分表 第6版》</div>
 </div>
-<div class="nav">
+<div class="gov-nav">
   <button class="active" onclick="switchTab('formula')">配方输入</button>
   <button onclick="switchTab('nutrition')">营养成分表</button>
   <button onclick="switchTab('check')">标签检查</button>
+  <button onclick="switchTab('review')">标签审核</button>
 </div>
 <div class="main">
   <div id="panel-formula" class="panel active"></div>
   <div id="panel-nutrition" class="panel"></div>
   <div id="panel-check" class="panel"></div>
+  <div id="panel-review" class="panel"></div>
 </div>
 <div id="toast-container"></div>
 <div id="modal-container"></div>
@@ -130,16 +179,16 @@ const BAGS_PER_BOX=15;
 const ALLERGENS={soy:{name:"大豆及其制品",keywords:["黑豆","黄豆","大豆","豆粕","豆腐","豆浆","酱油","毛豆"]},nuts:{name:"坚果及其果仁类制品",keywords:["核桃","杏仁","腰果","榛子","松子","开心果","夏威夷果","山核桃","胡桃"]},gluten:{name:"含麸质谷物",keywords:["小麦","大麦","黑麦","燕麦","麦片","面粉","麸皮"]},shellfish:{name:"甲壳纲类",keywords:["虾","龙虾","蟹"]},fish:{name:"鱼类",keywords:["鱼"]},egg:{name:"蛋类",keywords:["鸡蛋","鸭蛋","蛋黄","蛋白","蛋清","蛋粉"]},peanut:{name:"花生",keywords:["花生","花生酱","花生油","花生粉"]},milk:{name:"乳及乳制品",keywords:["牛奶","奶粉","乳清","乳糖","奶酪","黄油","奶油","炼乳"]}};
 let INGREDIENT_DB={"西洋参": {"source": "△ LIT", "sourceDetail": "西洋参营养成分研究综述，多篇文献交叉验证", "energy_kj": 1420, "protein": 12.0, "fat": 1.5, "sat_fat": 0.3, "carbs": 68.0, "sugar": 18.0, "fiber": 8.0, "sodium": 15.0}, "红参": {"source": "△ LIT", "sourceDetail": "红参加工品营养研究，韩国人参学会文献", "energy_kj": 1430, "protein": 13.0, "fat": 1.2, "sat_fat": 0.2, "carbs": 69.0, "sugar": 20.0, "fiber": 7.0, "sodium": 18.0}, "人参": {"source": "△ LIT", "sourceDetail": "人参(园参)营养成分研究，Food Chemistry 期刊数据", "energy_kj": 1425, "protein": 12.5, "fat": 1.3, "sat_fat": 0.3, "carbs": 68.5, "sugar": 19.0, "fiber": 7.5, "sodium": 16.0}, "黄芪": {"source": "▲ LABEL", "sourceDetail": "市售黄芪饮片营养标签(2024)，品牌：Xian Yi Tang", "energy_kj": 1584, "protein": 15.0, "fat": 1.0, "sat_fat": 0.4, "carbs": 76.0, "sugar": 21.0, "fiber": 3.0, "sodium": 16.0}, "黄精": {"source": "△ LIT", "sourceDetail": "多花黄精营养成分分析，中国中药杂志", "energy_kj": 1380, "protein": 5.0, "fat": 0.8, "sat_fat": 0.1, "carbs": 76.0, "sugar": 12.0, "fiber": 10.0, "sodium": 25.0}, "党参": {"source": "△ LIT", "sourceDetail": "党参属植物营养分析，Journal of Ethnopharmacology", "energy_kj": 1400, "protein": 8.5, "fat": 1.2, "sat_fat": 0.2, "carbs": 72.0, "sugar": 22.0, "fiber": 8.5, "sodium": 20.0}, "甘草": {"source": "△ LIT", "sourceDetail": "甘草根营养成分，中草药杂志", "energy_kj": 1350, "protein": 5.0, "fat": 0.8, "sat_fat": 0.1, "carbs": 74.0, "sugar": 15.0, "fiber": 8.0, "sodium": 30.0}, "麦冬": {"source": "△ LIT", "sourceDetail": "麦冬块根营养分析，中药材期刊", "energy_kj": 1410, "protein": 4.5, "fat": 1.0, "sat_fat": 0.2, "carbs": 77.0, "sugar": 25.0, "fiber": 6.0, "sodium": 12.0}, "桔梗": {"source": "☆ CFCT-6*", "sourceDetail": "CFCT-6 桔梗鲜品数据 × 浓缩系数 6.25（鲜→干）", "energy_kj": 1350, "protein": 5.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 74.0, "sugar": 10.0, "fiber": 12.0, "sodium": 30.0}, "芦根": {"source": "△ LIT", "sourceDetail": "芦根多糖及营养成分，食品科学期刊", "energy_kj": 1320, "protein": 3.5, "fat": 0.5, "sat_fat": 0.1, "carbs": 74.0, "sugar": 8.0, "fiber": 12.0, "sodium": 20.0}, "玉竹": {"source": "△ LIT", "sourceDetail": "玉竹根茎营养分析，中药材", "energy_kj": 1390, "protein": 5.5, "fat": 0.6, "sat_fat": 0.1, "carbs": 76.0, "sugar": 28.0, "fiber": 7.0, "sodium": 15.0}, "柴葛根": {"source": "△ LIT", "sourceDetail": "葛根(Pueraria lobata)营养，Food Chemistry", "energy_kj": 1450, "protein": 6.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 80.0, "sugar": 8.0, "fiber": 7.0, "sodium": 10.0}, "山药": {"source": "△ LIT", "sourceDetail": "怀山药(干)营养分析，Food Science and Technology", "energy_kj": 1420, "protein": 9.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 74.0, "sugar": 5.0, "fiber": 5.0, "sodium": 25.0}, "蒲公英根": {"source": "△ LIT", "sourceDetail": "蒲公英根营养成分分析，Journal of Medicinal Food", "energy_kj": 1380, "protein": 8.5, "fat": 1.5, "sat_fat": 0.3, "carbs": 70.0, "sugar": 5.0, "fiber": 12.0, "sodium": 80.0}, "牛蒡根": {"source": "△ LIT", "sourceDetail": "牛蒡根干品营养分析，Food Research International", "energy_kj": 1450, "protein": 8.0, "fat": 1.0, "sat_fat": 0.2, "carbs": 76.0, "sugar": 12.0, "fiber": 10.0, "sodium": 25.0}, "菊苣根": {"source": "☆ CFCT-6*", "sourceDetail": "CFCT-6 菊苣鲜品 × 浓缩系数（鲜→干）", "energy_kj": 1350, "protein": 5.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 74.0, "sugar": 15.0, "fiber": 14.0, "sodium": 50.0}, "肉苁蓉": {"source": "△ LIT", "sourceDetail": "荒漠肉苁蓉营养，Journal of Agricultural and Food Chemistry", "energy_kj": 1300, "protein": 12.0, "fat": 0.8, "sat_fat": 0.1, "carbs": 63.0, "sugar": 8.0, "fiber": 15.0, "sodium": 35.0}, "石斛": {"source": "△ LIT", "sourceDetail": "铁皮石斛营养成分，中国中药杂志", "energy_kj": 1280, "protein": 8.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 66.0, "sugar": 10.0, "fiber": 14.0, "sodium": 15.0}, "五指毛桃": {"source": "△ LIT", "sourceDetail": "五指毛桃根营养，中药材期刊", "energy_kj": 1400, "protein": 6.0, "fat": 1.0, "sat_fat": 0.2, "carbs": 75.0, "sugar": 10.0, "fiber": 10.0, "sodium": 10.0}, "玫瑰花冠": {"source": "▲ LABEL", "sourceDetail": "市售干玫瑰花冠营养标签(2024)，品牌：正豐", "energy_kj": 1470, "protein": 12.0, "fat": 1.2, "sat_fat": 0.0, "carbs": 70.0, "sugar": 2.0, "fiber": 8.0, "sodium": 5.0}, "菊花": {"source": "△ LIT", "sourceDetail": "菊花(干)营养成分，Food Chemistry / 多个品种均值", "energy_kj": 1350, "protein": 9.0, "fat": 1.5, "sat_fat": 0.2, "carbs": 66.0, "sugar": 5.0, "fiber": 14.0, "sodium": 20.0}, "陶菊": {"source": "△ LIT", "sourceDetail": "陶菊(干)营养成分，= 菊花数据", "energy_kj": 1350, "protein": 9.0, "fat": 1.5, "sat_fat": 0.2, "carbs": 66.0, "sugar": 5.0, "fiber": 14.0, "sodium": 20.0}, "金银花": {"source": "△ LIT", "sourceDetail": "金银花(干)营养，LWT - Food Science and Technology", "energy_kj": 1320, "protein": 8.0, "fat": 1.0, "sat_fat": 0.2, "carbs": 68.0, "sugar": 8.0, "fiber": 13.0, "sodium": 15.0}, "代代花": {"source": "△ LIT", "sourceDetail": "代代花营养分析，天然产物研究与开发", "energy_kj": 1300, "protein": 7.0, "fat": 0.8, "sat_fat": 0.1, "carbs": 68.0, "sugar": 5.0, "fiber": 15.0, "sodium": 10.0}, "桑叶": {"source": "△ LIT", "sourceDetail": "桑叶(干)营养，Journal of Functional Foods", "energy_kj": 1280, "protein": 14.0, "fat": 2.0, "sat_fat": 0.3, "carbs": 55.0, "sugar": 3.0, "fiber": 20.0, "sodium": 15.0}, "荷叶": {"source": "△ LIT", "sourceDetail": "荷叶(干)营养，Food Bioscience", "energy_kj": 1250, "protein": 10.0, "fat": 1.0, "sat_fat": 0.2, "carbs": 60.0, "sugar": 2.0, "fiber": 18.0, "sodium": 10.0}, "枇杷叶": {"source": "△ LIT", "sourceDetail": "枇杷叶(干)营养成分，Biomedicine & Pharmacotherapy", "energy_kj": 1300, "protein": 6.0, "fat": 1.2, "sat_fat": 0.2, "carbs": 67.0, "sugar": 3.0, "fiber": 16.0, "sodium": 8.0}, "马齿苋": {"source": "☆ CFCT-6*", "sourceDetail": "CFCT-6 马齿苋鲜品 × 浓缩系数 12.5（鲜→干）", "energy_kj": 1300, "protein": 18.0, "fat": 3.0, "sat_fat": 0.5, "carbs": 48.0, "sugar": 5.0, "fiber": 14.0, "sodium": 90.0}, "玉米须": {"source": "△ LIT", "sourceDetail": "玉米须(干)营养，Molecules 期刊", "energy_kj": 1200, "protein": 5.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 65.0, "sugar": 3.0, "fiber": 20.0, "sodium": 8.0}, "蒲公英叶": {"source": "☆ CFCT-6*", "sourceDetail": "CFCT-6 蒲公英叶鲜品数据 × 浓缩系数 6.25", "energy_kj": 1380, "protein": 20.0, "fat": 4.5, "sat_fat": 0.8, "carbs": 44.0, "sugar": 3.0, "fiber": 13.0, "sodium": 76.0}, "灵芝": {"source": "△ LIT", "sourceDetail": "赤芝子实体(干)营养，Int J Medicinal Mushrooms", "energy_kj": 1100, "protein": 12.0, "fat": 1.5, "sat_fat": 0.3, "carbs": 55.0, "sugar": 2.0, "fiber": 25.0, "sodium": 10.0}, "茯苓": {"source": "△ LIT", "sourceDetail": "茯苓菌核(干)营养分析，Carbohydrate Polymers", "energy_kj": 1050, "protein": 1.5, "fat": 0.3, "sat_fat": 0.1, "carbs": 60.0, "sugar": 1.0, "fiber": 30.0, "sodium": 5.0}, "陈皮丝": {"source": "△ LIT", "sourceDetail": "陈皮(干)营养，J Agricultural and Food Chemistry", "energy_kj": 1250, "protein": 4.0, "fat": 1.0, "sat_fat": 0.2, "carbs": 66.0, "sugar": 10.0, "fiber": 20.0, "sodium": 15.0}, "橘红": {"source": "△ LIT", "sourceDetail": "化橘红(干)营养，中药材期刊", "energy_kj": 1280, "protein": 3.5, "fat": 1.2, "sat_fat": 0.2, "carbs": 68.0, "sugar": 8.0, "fiber": 18.0, "sodium": 12.0}, "枸杞子": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，枸杞子(干)", "energy_kj": 1229, "protein": 13.9, "fat": 1.5, "sat_fat": 0.3, "carbs": 64.1, "sugar": 30.0, "fiber": 16.9, "sodium": 252.1}, "枸杞": {"source": "★ CFCT-6", "sourceDetail": "同枸杞子，中国食物成分表第6版", "energy_kj": 1229, "protein": 13.9, "fat": 1.5, "sat_fat": 0.3, "carbs": 64.1, "sugar": 30.0, "fiber": 16.9, "sodium": 252.1}, "桂圆肉": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：065008 桂圆肉", "energy_kj": 1328, "protein": 4.6, "fat": 1.0, "sat_fat": 0.2, "carbs": 73.5, "sugar": 45.0, "fiber": 2.0, "sodium": 7.3}, "红枣片": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：062303 枣(干，大)", "energy_kj": 1328, "protein": 2.1, "fat": 0.4, "sat_fat": 0.1, "carbs": 81.1, "sugar": 55.0, "fiber": 9.5, "sodium": 8.3}, "枣片": {"source": "★ CFCT-6", "sourceDetail": "同红枣片，中国食物成分表第6版 枣(干)", "energy_kj": 1328, "protein": 2.1, "fat": 0.4, "sat_fat": 0.1, "carbs": 81.1, "sugar": 55.0, "fiber": 9.5, "sodium": 8.3}, "桑葚": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：063904 桑葚(干)；蛋白质OCR值21.1→按多源校正为6.0", "energy_kj": 1245, "protein": 6.0, "fat": 6.1, "sat_fat": 1.0, "carbs": 54.2, "sugar": 32.0, "fiber": 29.3, "sodium": 28.1}, "无花果片": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：063912 无花果(干)", "energy_kj": 1510, "protein": 3.6, "fat": 4.3, "sat_fat": 0.8, "carbs": 77.8, "sugar": 48.0, "fiber": 10.0, "sodium": 10.0}, "无花果": {"source": "★ CFCT-6", "sourceDetail": "同无花果片，中国食物成分表第6版 无花果(干)", "energy_kj": 1510, "protein": 3.6, "fat": 4.3, "sat_fat": 0.8, "carbs": 77.8, "sugar": 48.0, "fiber": 10.0, "sodium": 10.0}, "山楂圈": {"source": "☆ CFCT-6*", "sourceDetail": "CFCT-6 山楂(红果)鲜品 × 浓缩系数（鲜→干），食物编码：061301", "energy_kj": 1420, "protein": 1.5, "fat": 1.5, "sat_fat": 0.3, "carbs": 78.0, "sugar": 35.0, "fiber": 10.0, "sodium": 15.0}, "乌梅": {"source": "△ LIT", "sourceDetail": "乌梅(干)营养，Journal of Food Science", "energy_kj": 1150, "protein": 2.0, "fat": 1.0, "sat_fat": 0.2, "carbs": 65.0, "sugar": 12.0, "fiber": 20.0, "sodium": 25.0}, "栀子": {"source": "△ LIT", "sourceDetail": "栀子(干)营养，中草药杂志", "energy_kj": 1200, "protein": 3.0, "fat": 1.5, "sat_fat": 0.3, "carbs": 65.0, "sugar": 3.0, "fiber": 18.0, "sodium": 10.0}, "罗汉果": {"source": "△ LIT", "sourceDetail": "罗汉果(干)营养，Food Chemistry", "energy_kj": 1100, "protein": 3.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 62.0, "sugar": 2.0, "fiber": 25.0, "sodium": 5.0}, "香橼": {"source": "△ LIT", "sourceDetail": "香橼(干)营养，天然产物研究与开发", "energy_kj": 1200, "protein": 2.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 68.0, "sugar": 8.0, "fiber": 20.0, "sodium": 5.0}, "决明子": {"source": "△ LIT", "sourceDetail": "决明子(熟制)营养，中草药杂志", "energy_kj": 1450, "protein": 15.0, "fat": 5.0, "sat_fat": 1.0, "carbs": 60.0, "sugar": 3.0, "fiber": 10.0, "sodium": 15.0}, "莱菔子": {"source": "△ LIT", "sourceDetail": "莱菔子(熟制)营养，中药材期刊", "energy_kj": 1400, "protein": 18.0, "fat": 2.0, "sat_fat": 0.3, "carbs": 60.0, "sugar": 3.0, "fiber": 12.0, "sodium": 20.0}, "胖大海": {"source": "△ LIT", "sourceDetail": "胖大海(干)营养，Journal of Herbal Medicine", "energy_kj": 1200, "protein": 4.0, "fat": 0.5, "sat_fat": 0.1, "carbs": 66.0, "sugar": 2.0, "fiber": 22.0, "sodium": 10.0}, "薏米": {"source": "△ LIT", "sourceDetail": "薏苡仁(干)营养，Food Science and Technology", "energy_kj": 1500, "protein": 12.8, "fat": 3.3, "sat_fat": 0.8, "carbs": 69.1, "sugar": 2.0, "fiber": 2.0, "sodium": 3.6}, "甜杏仁": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：071014 杏仁", "energy_kj": 2419, "protein": 22.5, "fat": 45.4, "sat_fat": 3.8, "carbs": 23.9, "sugar": 4.0, "fiber": 8.0, "sodium": 8.3}, "亚麻籽": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：072001 胡麻子", "energy_kj": 1884, "protein": 19.1, "fat": 30.7, "sat_fat": 2.9, "carbs": 39.5, "sugar": 1.5, "fiber": 30.2, "sodium": 48.8}, "南瓜子": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：072012 南瓜子仁", "energy_kj": 2408, "protein": 33.2, "fat": 48.1, "sat_fat": 8.5, "carbs": 4.9, "sugar": 1.0, "fiber": 4.9, "sodium": 20.6}, "白芝麻": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：072016 芝麻子(白)", "energy_kj": 2244, "protein": 18.4, "fat": 39.6, "sat_fat": 5.5, "carbs": 31.5, "sugar": 0.3, "fiber": 9.8, "sodium": 32.2}, "黑芝麻": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：072017 芝麻子(黑)", "energy_kj": 2340, "protein": 19.1, "fat": 46.1, "sat_fat": 6.5, "carbs": 24.0, "sugar": 0.3, "fiber": 14.0, "sodium": 8.3}, "葵花籽": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：072006 葵花子(生)", "energy_kj": 2548, "protein": 23.9, "fat": 49.9, "sat_fat": 5.2, "carbs": 19.1, "sugar": 2.6, "fiber": 6.1, "sodium": 5.5}, "核桃": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：071004 核桃(干)", "energy_kj": 2704, "protein": 14.9, "fat": 58.8, "sat_fat": 5.6, "carbs": 19.1, "sugar": 2.6, "fiber": 9.5, "sodium": 6.4}, "鹰嘴豆": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：039401 鹰嘴豆", "energy_kj": 1433, "protein": 21.2, "fat": 4.2, "sat_fat": 0.6, "carbs": 60.1, "sugar": 3.0, "fiber": 11.6, "sodium": 6.0}, "黑豆": {"source": "△ LIT", "sourceDetail": "黑豆(干)营养，Food Chemistry / USDA 数据交叉验证", "energy_kj": 1600, "protein": 36.0, "fat": 15.9, "sat_fat": 2.3, "carbs": 33.6, "sugar": 5.0, "fiber": 10.2, "sodium": 3.0}, "赤小豆": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：033101 赤小豆(干)", "energy_kj": 1357, "protein": 20.2, "fat": 0.6, "sat_fat": 0.1, "carbs": 63.4, "sugar": 2.0, "fiber": 7.7, "sodium": 2.2}, "芡实": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：072019 芡实米(干)", "energy_kj": 1475, "protein": 8.3, "fat": 0.3, "sat_fat": 0.1, "carbs": 79.6, "sugar": 1.0, "fiber": 0.9, "sodium": 28.4}, "莲子": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：072009 莲子(干)", "energy_kj": 1463, "protein": 17.2, "fat": 2.0, "sat_fat": 0.4, "carbs": 67.2, "sugar": 2.0, "fiber": 3.0, "sodium": 5.1}, "奇亚籽": {"source": "△ LIT", "sourceDetail": "奇亚籽国际公认营养数据，USDA SR Legacy", "energy_kj": 2034, "protein": 16.5, "fat": 30.7, "sat_fat": 3.3, "carbs": 42.1, "sugar": 0.0, "fiber": 34.4, "sodium": 16.0}, "黑米": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：012212 黑米", "energy_kj": 1427, "protein": 9.4, "fat": 2.5, "sat_fat": 0.5, "carbs": 72.2, "sugar": 1.0, "fiber": 3.9, "sodium": 7.1}, "黄苦荞": {"source": "△ LIT", "sourceDetail": "苦荞麦(黄苦荞)营养，Food Chemistry", "energy_kj": 1450, "protein": 12.0, "fat": 3.0, "sat_fat": 0.5, "carbs": 68.0, "sugar": 1.0, "fiber": 6.0, "sodium": 5.0}, "百合": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：045411 百合(脱水)", "energy_kj": 1449, "protein": 8.1, "fat": 0.1, "sat_fat": 0.0, "carbs": 79.1, "sugar": 5.0, "fiber": 1.7, "sodium": 43.0}, "阿胶": {"source": "★ CFCT-6", "sourceDetail": "中国食物成分表第6版，食物编码：219031 阿胶", "energy_kj": 1619, "protein": 73.0, "fat": 5.8, "sat_fat": 2.5, "carbs": 9.5, "sugar": 0.0, "fiber": 0.0, "sodium": 222.5}};
 const DEFAULT_DB=JSON.parse(JSON.stringify(INGREDIENT_DB));
-function loadDB(){const saved=localStorage.getItem('ingredient_db');if(saved){try{Object.assign(INGREDIENT_DB,JSON.parse(saved));}catch(e){}}}
+function loadDB(){const saved=localStorage.getItem("ingredient_db");if(saved){try{Object.assign(INGREDIENT_DB,JSON.parse(saved));}catch(e){}}}
 loadDB();
-function saveDB(){const custom={};for(const[k,v]of Object.entries(INGREDIENT_DB)){if(!DEFAULT_DB[k]||JSON.stringify(v)!==JSON.stringify(DEFAULT_DB[k])){custom[k]=v;}}localStorage.setItem('ingredient_db',JSON.stringify(custom));}
-function resetDB(){INGREDIENT_DB=JSON.parse(JSON.stringify(DEFAULT_DB));localStorage.removeItem('ingredient_db');}
-let currentFormula={productName:'',bagWeight:15,ingredients:[]};
-function loadFormula(){const saved=localStorage.getItem('current_formula');if(saved){try{currentFormula=JSON.parse(saved);}catch(e){}}}
+function saveDB(){const custom={};for(const[k,v]of Object.entries(INGREDIENT_DB)){if(!DEFAULT_DB[k]||JSON.stringify(v)!==JSON.stringify(DEFAULT_DB[k])){custom[k]=v;}}localStorage.setItem("ingredient_db",JSON.stringify(custom));}
+function resetDB(){INGREDIENT_DB=JSON.parse(JSON.stringify(DEFAULT_DB));localStorage.removeItem("ingredient_db");}
+let currentFormula={productName:"",bagWeight:15,ingredients:[]};
+function loadFormula(){const saved=localStorage.getItem("current_formula");if(saved){try{currentFormula=JSON.parse(saved);}catch(e){}}}
 loadFormula();
-function saveFormula(){localStorage.setItem('current_formula',JSON.stringify(currentFormula));}
+function saveFormula(){localStorage.setItem("current_formula",JSON.stringify(currentFormula));}
 function calcNutrition(){const totals={energy_kj:0,protein:0,fat:0,sat_fat:0,carbs:0,sugar:0,sodium:0,fiber:0};const totalW=currentFormula.bagWeight||15;const missing=[];for(const{name,weight}of currentFormula.ingredients){if(!weight||weight<=0)continue;const ing=INGREDIENT_DB[name];if(!ing){missing.push(name);continue;}const ratio=weight/100;for(const k of Object.keys(totals)){totals[k]+=(ing[k]||0)*ratio;}}const scale=100/totalW;const per100g={};for(const[k,v]of Object.entries(totals)){per100g[k]=Math.round(v*scale*10)/10;}return{per100g,missing};}
-function nrvPct(val,key){const n=NRV[key];if(!n)return'-';const pct=Math.round(val/n*100);return pct<1&&val>0?'0%':pct+'%';}
+function nrvPct(val,key){const n=NRV[key];if(!n)return"-";const pct=Math.round(val/n*100);return pct<1&&val>0?"0%":pct+"%";}
 function checkLabelCompliance(){const results=[];const{per100g,missing}=calcNutrition();const ingredients=currentFormula.ingredients.filter(i=>i.weight>0);
 const required=['energy_kj','protein','fat','sat_fat','carbs','sugar','sodium'];
 const allPresent=required.every(k=>per100g[k]!==undefined);
@@ -203,6 +252,249 @@ document.addEventListener('DOMContentLoaded',function(){renderFormulaPanel();doc
 document.addEventListener('click',function(e){if(!e.target.closest('.search-dropdown')){document.querySelectorAll('.dropdown').forEach(function(d){d.classList.remove('show');});}});
 </script>
 </parameter>
+// ═══════════════════════════════════════════════
+// 标签审核模块 — 上传标签图片 + OCR + 合规审核
+// ═══════════════════════════════════════════════
+
+let reviewImageData = null;
+let reviewOcrResult = null;
+let reviewOcrRunning = false;
+
+function renderReviewPanel(){
+  const panel = document.getElementById('panel-review');
+  const {per100g} = calcNutrition();
+  let h = '<div class="row"><div class="col"><div class="card"><h3>步骤一：上传标签图片</h3>';
+  h += '<div class="upload-zone" id="uploadZone" onclick="document.getElementById(\'labelImageInput\').click()">';
+  h += '<input type="file" id="labelImageInput" accept="image/*" onchange="handleLabelImage(event)" style="display:none">';
+  if (reviewImageData) {
+    h += '<img src="' + reviewImageData + '" alt="标签图片">';
+    h += '<div class="mt-8 text-center"><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();document.getElementById(\'labelImageInput\').click()">更换图片</button></div>';
+  } else {
+    h += '<div class="placeholder">&#128206;</div>';
+    h += '<div class="text">点击上传产品标签照片</div>';
+    h += '<div class="text" style="font-size:12px;margin-top:4px">支持 JPG / PNG，建议清晰拍摄营养成分表区域</div>';
+  }
+  h += '</div></div>';
+
+  // OCR 按钮
+  if (reviewImageData) {
+    h += '<div class="card"><h3>步骤二：OCR 识别</h3>';
+    h += '<p style="font-size:13px;color:#666;margin-bottom:8px">自动识别标签中的营养成分数值</p>';
+    h += '<button class="btn btn-primary" onclick="runOCR()" id="ocrBtn">开始识别</button>';
+    h += '<div class="ocr-progress hidden" id="ocrProgress"><div class="bar" style="width:0%" id="ocrBar"></div></div>';
+    h += '<div id="ocrStatus" style="font-size:12px;color:#888;margin-top:4px"></div>';
+    if (reviewOcrResult) {
+      h += '<div class="mt-8" style="font-size:13px;color:#135c3f">上次识别完成</div>';
+    }
+    h += '</div>';
+  }
+
+  h += '</div><div class="col">';
+
+  // 步骤三：对比审核
+  h += '<div class="card"><h3>步骤三：数值对比审核</h3>';
+  h += '<p style="font-size:13px;color:#666;margin-bottom:8px">标签显示值 vs 测算值对比。OCR 识别后自动填充，也可手动输入标签值。</p>';
+
+  const items = [
+    {label:'能量',key:'energy_kj',unit:'kJ'},
+    {label:'蛋白质',key:'protein',unit:'g'},
+    {label:'脂肪',key:'fat',unit:'g'},
+    {label:'饱和脂肪',key:'sat_fat',unit:'g'},
+    {label:'碳水化合物',key:'carbs',unit:'g'},
+    {label:'糖',key:'sugar',unit:'g'},
+    {label:'钠',key:'sodium',unit:'mg'},
+  ];
+
+  h += '<div class="compare-grid"><div class="header">项目</div><div class="header">测算值</div><div class="header">标签值（手动/OCR填入）</div>';
+  for (const item of items) {
+    const calcVal = per100g[item.key];
+    const calcStr = item.key === 'sodium' ? Math.round(calcVal) : (item.key === 'energy_kj' ? Math.round(calcVal) : (Math.round(calcVal*10)/10).toFixed(1));
+    const labelVal = document.getElementById('input-'+item.key) ? document.getElementById('input-'+item.key).value : (reviewOcrResult ? reviewOcrResult[item.key] || '' : '');
+    h += '<div style="font-weight:600">'+item.label+'</div>';
+    h += '<div>'+calcStr+' '+item.unit+'</div>';
+    h += '<div><input type="text" id="input-'+item.key+'" value="'+labelVal+'" placeholder="输入标签值" style="width:100%" oninput="compareValues()"> <span style="font-size:11px;color:#888">'+item.unit+'</span></div>';
+  }
+  h += '</div>';
+
+  h += '<button class="btn btn-success mt-16" onclick="compareValues()" style="width:100%;justify-content:center">执行审核对比</button>';
+  h += '<div id="compareResult" class="mt-16"></div>';
+  h += '</div></div></div>';
+
+  panel.innerHTML = h;
+  if (reviewOcrResult) { compareValues(); }
+}
+
+function handleLabelImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    reviewImageData = e.target.result;
+    reviewOcrResult = null;
+    renderReviewPanel();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runOCR() {
+  if (reviewOcrRunning) return;
+  reviewOcrRunning = true;
+  const btn = document.getElementById('ocrBtn');
+  const bar = document.getElementById('ocrBar');
+  const progress = document.getElementById('ocrProgress');
+  const status = document.getElementById('ocrStatus');
+
+  btn.disabled = true; btn.textContent = '识别中...';
+  progress.classList.remove('hidden'); bar.style.width = '0%';
+  status.textContent = '加载中文识别引擎...';
+
+  try {
+    const worker = await Tesseract.createWorker('chi_sim', 1, {
+      logger: function(m) {
+        if (m.status === 'recognizing text') {
+          bar.style.width = Math.round(m.progress * 100) + '%';
+          status.textContent = '识别文字中...' + Math.round(m.progress * 100) + '%';
+        } else {
+          status.textContent = m.status;
+        }
+      }
+    });
+
+    status.textContent = '正在识别...';
+    const { data } = await worker.recognize(reviewImageData);
+    const text = data.text;
+    await worker.terminate();
+
+    // 解析 OCR 文本提取营养成分数值
+    reviewOcrResult = parseNutritionFromOCR(text);
+    bar.style.width = '100%';
+    status.textContent = '识别完成！共提取 ' + Object.values(reviewOcrResult).filter(v => v !== null).length + '/7 项';
+    progress.classList.add('hidden');
+    btn.textContent = '重新识别';
+
+    // 填充输入框
+    for (const [key, val] of Object.entries(reviewOcrResult)) {
+      if (val !== null) {
+        const input = document.getElementById('input-' + key);
+        if (input) input.value = val;
+      }
+    }
+    compareValues();
+  } catch(err) {
+    status.textContent = '识别失败：' + err.message + '。请手动输入标签值。';
+    progress.classList.add('hidden');
+    btn.textContent = '重试';
+  }
+  reviewOcrRunning = false;
+  btn.disabled = false;
+}
+
+function parseNutritionFromOCR(text) {
+  const result = {energy_kj: null, protein: null, fat: null, sat_fat: null, carbs: null, sugar: null, sodium: null};
+
+  // 常见 OCR 匹配模式
+  const patterns = {
+    energy_kj: [/能量\s*[：:]*\s*(\d+\.?\d*)\s*(?:kJ|kj|KJ|千焦)/i, /(\d+\.?\d*)\s*kJ/i],
+    protein: [/蛋白质\s*[：:]*\s*(\d+\.?\d*)\s*g/i],
+    fat: [/脂肪\s*[：:]*\s*(\d+\.?\d*)\s*g/i, /^\s*脂肪\s+(\d+\.?\d*)/im],
+    sat_fat: [/饱和脂肪[酸]?\s*[：:]*\s*(\d+\.?\d*)\s*g/i],
+    carbs: [/碳水化合物\s*[：:]*\s*(\d+\.?\d*)\s*g/i],
+    sugar: [/糖\s*[：:]*\s*(\d+\.?\d*)\s*g/i],
+    sodium: [/钠\s*[：:]*\s*(\d+\.?\d*)\s*mg/i, /钠\s*[：:]*\s*(\d+\.?\d*)/i],
+  };
+
+  for (const [key, pats] of Object.entries(patterns)) {
+    for (const pat of pats) {
+      const match = text.match(pat);
+      if (match) {
+        result[key] = parseFloat(match[1]);
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+function compareValues() {
+  const container = document.getElementById('compareResult');
+  if (!container) return;
+  const {per100g} = calcNutrition();
+  const items = [
+    {label:'能量',key:'energy_kj',unit:'kJ'},
+    {label:'蛋白质',key:'protein',unit:'g'},
+    {label:'脂肪',key:'fat',unit:'g'},
+    {label:'饱和脂肪',key:'sat_fat',unit:'g'},
+    {label:'碳水化合物',key:'carbs',unit:'g'},
+    {label:'糖',key:'sugar',unit:'g'},
+    {label:'钠',key:'sodium',unit:'mg'},
+  ];
+
+  let issues = [];
+  let allMatch = true;
+  let checkedCount = 0;
+
+  let h = '<table class="nutrition-table"><thead><tr><th>项目</th><th>测算值</th><th>标签值</th><th>偏差</th><th>判定</th></tr></thead><tbody>';
+
+  for (const item of items) {
+    const calcVal = per100g[item.key];
+    const calcStr = item.key === 'sodium' ? Math.round(calcVal) : (item.key === 'energy_kj' ? Math.round(calcVal) : (Math.round(calcVal*10)/10).toFixed(1));
+    const inputEl = document.getElementById('input-' + item.key);
+    const labelStr = inputEl ? inputEl.value.trim() : '';
+    const labelVal = parseFloat(labelStr);
+
+    let diff = '', status = '', cls = '';
+    if (labelStr === '' || isNaN(labelVal)) {
+      status = '未填写';
+      cls = '';
+    } else {
+      checkedCount++;
+      const calc = parseFloat(calcStr);
+      const pctDiff = Math.abs(labelVal - calc) / Math.max(calc, 0.1) * 100;
+      diff = (labelVal - calc > 0 ? '+' : '') + (Math.round((labelVal - calc) * 10) / 10).toFixed(1) + ' (' + Math.round(pctDiff) + '%)';
+
+      // GB 28050 允许误差：≤120%标示值
+      const ratio = labelVal / Math.max(calc, 0.01);
+      if (pctDiff < 5) {
+        status = '通过'; cls = 'diff-ok';
+      } else if (ratio <= 1.2) {
+        status = '合规'; cls = 'diff-ok';
+        issues.push(item.label + '偏差' + Math.round(pctDiff) + '%（在允许范围内）');
+      } else {
+        status = '偏差超标'; cls = 'diff-highlight';
+        issues.push(item.label + '：标签' + labelVal + ' vs 测算' + calcStr + '，偏差' + Math.round(pctDiff) + '%（超过120%标示值限制）');
+        allMatch = false;
+      }
+    }
+
+    h += '<tr><td style="text-align:left">'+item.label+'</td><td>'+calcStr+' '+item.unit+'</td>';
+    h += '<td class="'+cls+'">'+(labelStr||'-')+'</td>';
+    h += '<td style="font-size:12px">'+diff+'</td>';
+    h += '<td class="'+cls+'">'+status+'</td></tr>';
+  }
+  h += '</tbody></table>';
+
+  // 审核结论
+  if (checkedCount >= 5) {
+    if (allMatch) {
+      h += '<div style="text-align:center;padding:20px"><span class="stamp-pass">审核通过</span></div>';
+      h += '<div style="text-align:center;color:#135c3f;font-size:14px;font-weight:600">标签营养成分表与测算值一致，符合 GB 28050-2025 要求</div>';
+    } else {
+      h += '<div style="text-align:center;padding:20px"><span class="stamp-fail">需整改</span></div>';
+      h += '<div style="background:#fff1f0;padding:12px;border-radius:4px;margin-top:8px"><strong style="color:#cf1322">发现以下问题：</strong><ul style="margin:8px 0 0 20px;font-size:13px">';
+      for (const issue of issues) {
+        h += '<li style="color:#a80d1a">'+issue+'</li>';
+      }
+      h += '</ul></div>';
+    }
+  } else if (checkedCount === 0) {
+    h += '<div style="text-align:center;padding:20px;color:#888">请在左侧输入标签上的营养成分数值后执行审核</div>';
+  } else {
+    h += '<div style="text-align:center;padding:20px;color:#d46b08">已填写 '+checkedCount+'/7 项，建议填写全部 7 项以获得完整审核结果</div>';
+  }
+
+  container.innerHTML = h;
+}
 
 </script>
 </body>
